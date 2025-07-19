@@ -1,0 +1,120 @@
+<!-- index.html: Apartment Booking Form with dynamic Project > Block > Flat, auto-fill Saleable Area & Facing -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Apartment Booking Form</title>
+  <script>
+    let lookupData = [];
+
+    async function loadData() {
+      const res = await fetch("https://script.google.com/macros/s/AKfycbzrTBHQBGP1WbY5L4qoUx-Evr315t71sI8LK3CPSC7TA_8YIcS1Bwn6cFEF7iAWjh4SQw/exec");
+      const data = await res.json();
+      lookupData = data;
+
+      const projectSelect = document.getElementById("project");
+      const projects = [...new Set(lookupData.map(row => row.project))];
+      projects.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p;
+        option.text = p;
+        projectSelect.appendChild(option);
+      });
+    }
+
+    function onProjectChange() {
+      const project = document.getElementById("project").value;
+      const blockSelect = document.getElementById("block");
+      blockSelect.innerHTML = '<option value="">--Select Block--</option>';
+      document.getElementById("flat").innerHTML = '<option value="">--Select Flat--</option>';
+      document.getElementById("area").value = "";
+      document.getElementById("facing").value = "";
+
+      const blocks = [...new Set(lookupData.filter(row => row.project === project).map(r => r.block))];
+      blocks.forEach(b => {
+        const option = document.createElement("option");
+        option.value = b;
+        option.text = b;
+        blockSelect.appendChild(option);
+      });
+    }
+
+    function onBlockChange() {
+      const project = document.getElementById("project").value;
+      const block = document.getElementById("block").value;
+      const flatSelect = document.getElementById("flat");
+      flatSelect.innerHTML = '<option value="">--Select Flat--</option>';
+      document.getElementById("area").value = "";
+      document.getElementById("facing").value = "";
+
+      const flats = lookupData.filter(row => row.project === project && row.block === block).map(r => r.flat);
+      flats.forEach(f => {
+        const option = document.createElement("option");
+        option.value = f;
+        option.text = f;
+        flatSelect.appendChild(option);
+      });
+    }
+
+    function onFlatChange() {
+      const project = document.getElementById("project").value;
+      const block = document.getElementById("block").value;
+      const flat = document.getElementById("flat").value;
+
+      const match = lookupData.find(r => r.project === project && r.block === block && r.flat === flat);
+      if (match) {
+        document.getElementById("area").value = match.area;
+        document.getElementById("facing").value = match.facing;
+      }
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+      const formData = new FormData(event.target);
+      const obj = Object.fromEntries(formData);
+      await fetch("https://script.google.com/macros/s/AKfycbzrTBHQBGP1WbY5L4qoUx-Evr315t71sI8LK3CPSC7TA_8YIcS1Bwn6cFEF7iAWjh4SQw/exec", {
+        method: "POST",
+        body: JSON.stringify(obj)
+      });
+      alert("Form submitted successfully!");
+      event.target.reset();
+    }
+
+    window.onload = loadData;
+  </script>
+</head>
+<body>
+  <h2>Apartment Booking Form</h2>
+  <form onsubmit="handleSubmit(event)">
+    <label>Project Name:</label>
+    <select id="project" name="Project Name" onchange="onProjectChange()" required>
+      <option value="">--Select Project--</option>
+    </select><br><br>
+
+    <label>Block Number:</label>
+    <select id="block" name="Block Number" onchange="onBlockChange()" required>
+      <option value="">--Select Block--</option>
+    </select><br><br>
+
+    <label>Flat Number:</label>
+    <select id="flat" name="Flat Number" onchange="onFlatChange()" required>
+      <option value="">--Select Flat--</option>
+    </select><br><br>
+
+    <label>Saleable Area:</label>
+    <input type="text" id="area" name="Saleable Area" readonly><br><br>
+
+    <label>Facing:</label>
+    <input type="text" id="facing" name="Facing" readonly><br><br>
+
+    <label>Full Name:</label>
+    <input type="text" name="Full Name" required><br><br>
+
+    <label>Mobile Number:</label>
+    <input type="text" name="Mobile Number" required><br><br>
+
+    <!-- Add more fields here as needed -->
+
+    <button type="submit">Submit</button>
+  </form>
+</body>
+</html>
