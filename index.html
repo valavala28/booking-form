@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Apartment Booking Form</title>
+</head>
+<body>
+  <h2>Apartment Booking Form</h2>
+
+  <label>Project Name:</label>
+  <select id="project"></select><br><br>
+
+  <label>Block Number:</label>
+  <select id="block"></select><br><br>
+
+  <label>Flat Number:</label>
+  <select id="flat"></select><br><br>
+
+  <label>Saleable Area:</label>
+  <input type="text" id="area" readonly><br><br>
+
+  <label>Facing:</label>
+  <input type="text" id="facing" readonly><br><br>
+
+  <label>Full Name:</label>
+  <input type="text" id="fullname"><br><br>
+
+  <label>Mobile Number:</label>
+  <input type="text" id="mobile"><br><br>
+
+  <button onclick="submitForm()">Submit</button>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycby9FKSO8OIQSrAewqqNGVxLdVfN1iQYTco2dSrHIDpiXaNbq0Q57u6JNN7ZPQhA72-EpQ/exec";
+    let lookupData = [];
+
+    async function fetchLookupData() {
+      try {
+        const res = await fetch(`${scriptURL}?action=getLookupData`);
+        lookupData = await res.json();
+
+        const projectSet = [...new Set(lookupData.map(i => i.projectname))];
+        const projectDropdown = document.getElementById("project");
+        projectSet.forEach(p => {
+          const option = document.createElement("option");
+          option.value = option.text = p;
+          projectDropdown.add(option);
+        });
+
+        projectDropdown.addEventListener("change", updateBlocks);
+      } catch (err) {
+        alert("Failed to load lookup data");
+        console.error(err);
+      }
+    }
+
+    function updateBlocks() {
+      const selectedProject = document.getElementById("project").value;
+      const blockSet = [...new Set(
+        lookupData.filter(i => i.projectname === selectedProject).map(i => i.blocknumber)
+      )];
+
+      const blockDropdown = document.getElementById("block");
+      blockDropdown.innerHTML = "";
+      blockSet.forEach(b => {
+        const option = document.createElement("option");
+        option.value = option.text = b;
+        blockDropdown.add(option);
+      });
+
+      blockDropdown.addEventListener("change", updateFlats);
+    }
+
+    function updateFlats() {
+      const selectedProject = document.getElementById("project").value;
+      const selectedBlock = document.getElementById("block").value;
+      const flatSet = [...new Set(
+        lookupData.filter(i => i.projectname === selectedProject && i.blocknumber === selectedBlock).map(i => i.flatnumber)
+      )];
+
+      const flatDropdown = document.getElementById("flat");
+      flatDropdown.innerHTML = "";
+      flatSet.forEach(f => {
+        const option = document.createElement("option");
+        option.value = option.text = f;
+        flatDropdown.add(option);
+      });
+
+      flatDropdown.addEventListener("change", autoFillDetails);
+    }
+
+    function autoFillDetails() {
+      const p = document.getElementById("project").value;
+      const b = document.getElementById("block").value;
+      const f = document.getElementById("flat").value;
+
+      const match = lookupData.find(i => i.projectname === p && i.blocknumber === b && i.flatnumber === f);
+      if (match) {
+        document.getElementById("area").value = match.saleablearea;
+        document.getElementById("facing").value = match.facing;
+      }
+    }
+
+    async function submitForm() {
+      const formData = {
+        "Project Name": document.getElementById("project").value,
+        "Block Number": document.getElementById("block").value,
+        "Flat Number": document.getElementById("flat").value,
+        "Saleable Area": document.getElementById("area").value,
+        "Facing": document.getElementById("facing").value,
+        "Full Name": document.getElementById("fullname").value,
+        "Mobile Number": document.getElementById("mobile").value
+      };
+
+      try {
+        const res = await fetch(scriptURL, {
+          method: "POST",
+          body: JSON.stringify(formData),
+          headers: { "Content-Type": "application/json" }
+        });
+
+        if ((await res.text()) === "Success") {
+          alert("Submitted!");
+        } else {
+          alert("Submission failed.");
+        }
+      } catch (err) {
+        alert("Submission error!");
+        console.error(err);
+      }
+    }
+
+    window.onload = fetchLookupData;
+  </script>
+</body>
+</html>
