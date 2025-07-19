@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Apartment Booking Form</title>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <h2>Apartment Booking Form</h2>
+
+  <form id="bookingForm">
+    <label>Project Name:
+      <select id="project" name="Project Name" required>
+        <option value="">--Select Project--</option>
+      </select>
+    </label><br><br>
+
+    <label>Block Number:
+      <select id="block" name="Block Number" required>
+        <option value="">--Select Block--</option>
+      </select>
+    </label><br><br>
+
+    <label>Flat Number:
+      <select id="flat" name="Flat Number" required>
+        <option value="">--Select Flat--</option>
+      </select>
+    </label><br><br>
+
+    <label>Saleable Area:
+      <input type="text" id="saleableArea" name="Saleable Area" readonly>
+    </label><br><br>
+
+    <label>Facing:
+      <input type="text" id="facing" name="Facing" readonly>
+    </label><br><br>
+
+    <label>Full Name:
+      <input type="text" name="Full Name" required>
+    </label><br><br>
+
+    <label>Mobile Number:
+      <input type="text" name="Mobile Number" required>
+    </label><br><br>
+
+    <!-- Add more fields here as needed, ensuring names match sheet headers -->
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzrTBHQBGP1WbY5L4qoUx-Evr315t71sI8LK3CPSC7TA_8YIcS1Bwn6cFEF7iAWjh4SQw/exec';
+
+    let lookupData = [];
+
+    async function fetchLookupData() {
+      const res = await fetch(`${scriptURL}?action=getLookupData`);
+      lookupData = await res.json();
+
+      const projectSet = new Set(lookupData.map(item => item.projectname));
+      populateSelect(document.getElementById('project'), Array.from(projectSet));
+    }
+
+    function populateSelect(select, items) {
+      select.innerHTML = '<option value="">--Select--</option>';
+      items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        select.appendChild(option);
+      });
+    }
+
+    document.getElementById('project').addEventListener('change', function () {
+      const selectedProject = this.value;
+      const blocks = new Set(
+        lookupData
+          .filter(item => item.projectname === selectedProject)
+          .map(item => item.blocknumber)
+      );
+      populateSelect(document.getElementById('block'), Array.from(blocks));
+      document.getElementById('flat').innerHTML = '<option value="">--Select Flat--</option>';
+      document.getElementById('saleableArea').value = '';
+      document.getElementById('facing').value = '';
+    });
+
+    document.getElementById('block').addEventListener('change', function () {
+      const selectedProject = document.getElementById('project').value;
+      const selectedBlock = this.value;
+      const flats = lookupData
+        .filter(item => item.projectname === selectedProject && item.blocknumber === selectedBlock)
+        .map(item => item.flatnumber);
+      populateSelect(document.getElementById('flat'), flats);
+      document.getElementById('saleableArea').value = '';
+      document.getElementById('facing').value = '';
+    });
+
+    document.getElementById('flat').addEventListener('change', function () {
+      const selectedProject = document.getElementById('project').value;
+      const selectedBlock = document.getElementById('block').value;
+      const selectedFlat = this.value;
+      const match = lookupData.find(item =>
+        item.projectname === selectedProject &&
+        item.blocknumber === selectedBlock &&
+        item.flatnumber == selectedFlat
+      );
+      if (match) {
+        document.getElementById('saleableArea').value = match.saleablearea;
+        document.getElementById('facing').value = match.facing;
+      }
+    });
+
+    document.getElementById('bookingForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const formObj = {};
+      formData.forEach((value, key) => {
+        formObj[key] = value;
+      });
+
+      try {
+        const res = await fetch(scriptURL, {
+          method: 'POST',
+          body: JSON.stringify(formObj),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (res.ok) {
+          alert('Form submitted successfully!');
+          document.getElementById('bookingForm').reset();
+        } else {
+          alert('Submission failed.');
+        }
+      } catch (error) {
+        alert('Error submitting form.');
+        console.error(error);
+      }
+    });
+
+    fetchLookupData();
+  </script>
+</body>
+</html>
