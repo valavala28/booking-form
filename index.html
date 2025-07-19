@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Apartment Booking Form</title>
+</head>
+<body>
+  <h2>Apartment Booking Form</h2>
+
+  <label>Project Name:</label>
+  <select id="project" onchange="updateBlocks()"><option>--Select Project--</option></select><br><br>
+
+  <label>Block Number:</label>
+  <select id="block" onchange="updateFlats()"><option>--Select Block--</option></select><br><br>
+
+  <label>Flat Number:</label>
+  <select id="flat" onchange="autoFillDetails()"><option>--Select Flat--</option></select><br><br>
+
+  <label>Saleable Area:</label>
+  <input type="text" id="area" readonly><br><br>
+
+  <label>Facing:</label>
+  <input type="text" id="facing" readonly><br><br>
+
+  <label>Full Name:</label>
+  <input type="text" id="fullname"><br><br>
+
+  <label>Mobile Number:</label>
+  <input type="text" id="mobile"><br><br>
+
+  <button onclick="submitForm()">Submit</button>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycby9FKSO8OIQSrAewqqNGVxLdVfN1iQYTco2dSrHIDpiXaNbq0Q57u6JNN7ZPQhA72-EpQ/exec"; // Replace with actual deployed Apps Script URL
+    let lookupData = [];
+
+    async function fetchLookupData() {
+      try {
+        const response = await fetch(`${scriptURL}?action=getLookupData`);
+        lookupData = await response.json();
+
+        const projectDropdown = document.getElementById("project");
+        const uniqueProjects = [...new Set(lookupData.map(d => d.projectname))];
+
+        uniqueProjects.forEach(proj => {
+          const option = document.createElement("option");
+          option.value = option.text = proj;
+          projectDropdown.appendChild(option);
+        });
+      } catch (err) {
+        alert("Failed to load lookup data.");
+        console.error(err);
+      }
+    }
+
+    function updateBlocks() {
+      const project = document.getElementById("project").value;
+      const blockDropdown = document.getElementById("block");
+      blockDropdown.innerHTML = '<option>--Select Block--</option>';
+
+      const blocks = [...new Set(lookupData
+        .filter(d => d.projectname === project)
+        .map(d => d.blocknumber))];
+
+      blocks.forEach(block => {
+        const option = document.createElement("option");
+        option.value = option.text = block;
+        blockDropdown.appendChild(option);
+      });
+
+      updateFlats(); // Reset flats too
+    }
+
+    function updateFlats() {
+      const project = document.getElementById("project").value;
+      const block = document.getElementById("block").value;
+      const flatDropdown = document.getElementById("flat");
+      flatDropdown.innerHTML = '<option>--Select Flat--</option>';
+
+      const flats = [...new Set(lookupData
+        .filter(d => d.projectname === project && d.blocknumber === block)
+        .map(d => d.flatnumber))];
+
+      flats.forEach(flat => {
+        const option = document.createElement("option");
+        option.value = option.text = flat;
+        flatDropdown.appendChild(option);
+      });
+
+      autoFillDetails();
+    }
+
+    function autoFillDetails() {
+      const project = document.getElementById("project").value;
+      const block = document.getElementById("block").value;
+      const flat = document.getElementById("flat").value;
+
+      const match = lookupData.find(d =>
+        d.projectname === project &&
+        d.blocknumber === block &&
+        d.flatnumber === flat);
+
+      document.getElementById("area").value = match ? match.saleablearea : '';
+      document.getElementById("facing").value = match ? match.facing : '';
+    }
+
+    async function submitForm() {
+      const formData = {
+        "Project Name": document.getElementById("project").value,
+        "Block Number": document.getElementById("block").value,
+        "Flat Number": document.getElementById("flat").value,
+        "Saleable Area": document.getElementById("area").value,
+        "Facing": document.getElementById("facing").value,
+        "Full Name": document.getElementById("fullname").value,
+        "Mobile Number": document.getElementById("mobile").value
+      };
+
+      try {
+        const response = await fetch(scriptURL, {
+          method: "POST",
+          body: JSON.stringify(formData),
+          headers: { "Content-Type": "application/json" }
+        });
+
+        const result = await response.text();
+        if (result === "Success") {
+          alert("Form submitted successfully!");
+        } else {
+          alert("Submission failed.\n" + result);
+        }
+      } catch (err) {
+        alert("Submission failed (network error).");
+        console.error(err);
+      }
+    }
+
+    window.onload = fetchLookupData;
+  </script>
+</body>
+</html>
